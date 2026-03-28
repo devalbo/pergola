@@ -35,7 +35,7 @@ export const examples: ExampleDefinition[] = Object.entries(modules)
   .sort((a, b) => a.id.localeCompare(b.id));
 
 export const defaultExampleId: string =
-  examples.find((e) => e.id === "pergola-and-house")?.id ?? examples[0]?.id ?? "";
+  examples.find((e) => e.id === "patio")?.id ?? examples[0]?.id ?? "";
 
 export function getExampleById(id: string): ExampleDefinition | undefined {
   return examples.find((e) => e.id === id);

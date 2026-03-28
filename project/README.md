@@ -1,6 +1,6 @@
 # CAD examples (`project/`)
 
-All sample models live here so you can grow the repo without touching the viewer shell.
+Scenes live here: each example **imports shapes from [`components/`](../components)**, optionally overrides parameters, and **`fuse`s** (or otherwise combines) them into `buildScene()`.
 
 ## Add a new example
 
@@ -18,6 +18,7 @@ All sample models live here so you can grow the repo without touching the viewer
 |------|---------|
 | [`types.ts`](types.ts) | Shared `ExampleMeta` type. |
 | [`registry.ts`](registry.ts) | Auto-loads `./examples/*.ts` and exposes `examples`, `getExampleById`, `defaultExampleId`. |
-| [`examples/`](examples/) | One file per example. |
+| [`examples/`](examples/) | One file per **scene** (e.g. patio = house + pergola). |
+| [`../components/`](../components) | Reusable **`buildHouse`**, **`buildPergola`**, etc. |
 
 The **worker** imports the registry; the **main** thread only asks the worker for the list and meshes (no OpenCascade on the UI thread).

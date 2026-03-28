@@ -29,8 +29,9 @@ Open the URL Vite prints (default `http://localhost:5173`). Orbit: drag to rotat
 
 | Path | Role |
 |------|------|
-| [`project/examples/`](project/examples/) | One `.ts` file per CAD example; auto-registered by [`project/registry.ts`](project/registry.ts). |
-| [`project/README.md`](project/README.md) | How to add new examples. |
+| [`components/`](components/) | Reusable **`buildHouse`**, **`buildPergola`**, etc.; scenes override params and assemble. |
+| [`project/examples/`](project/examples/) | One `.ts` file per **scene**; auto-registered by [`project/registry.ts`](project/registry.ts). |
+| [`project/README.md`](project/README.md) | How to add scenes and use components. |
 | [`src/worker.ts`](src/worker.ts) | Loads OpenCascade WASM; `listExamples` + `createMesh(id)` via [Comlink](https://github.com/GoogleChromeLabs/comlink). |
 | [`src/main.ts`](src/main.ts) | Three.js viewer, example picker, `?example=` URL sync. |
 
