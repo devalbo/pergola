@@ -68,10 +68,10 @@ sun.shadow.mapSize.set(2048, 2048);
 scene.add(sun);
 scene.add(new AmbientLight(0xb4c9e8, 0.45));
 
-const grid = new GridHelper(56, 56, 0x5a7a8f, 0x3d5566);
-grid.rotation.x = Math.PI / 2;
-grid.position.z = 0.002;
-scene.add(grid);
+// const grid = new GridHelper(56, 56, 0x5a7a8f, 0x3d5566);
+// grid.rotation.x = Math.PI / 2;
+// grid.position.z = 0.002;
+// scene.add(grid);
 
 const cadRoot = new Group();
 scene.add(cadRoot);

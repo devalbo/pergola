@@ -91,6 +91,7 @@ function pergolaParamsForPatio(merged: Record<string, number>): Partial<PergolaP
     span,
     postSize: 6 / 12,
     height: merged.pergolaHeightFt,
+    heightFar: 8,
     rafterCount: 9,
     beamThickness: 8 / 12,
   };

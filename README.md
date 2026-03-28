@@ -19,6 +19,28 @@ npm run dev
 
 Open the URL Vite prints (default `http://localhost:5173`). Orbit: drag to rotate, scroll to zoom.
 
+**Optional:** `npx tsc --noEmit` typechecks the CAD + viewer code.
+
+## Viewer (main thread)
+
+- **Scene picker** (toolbar): choose a registered example; URL stays in sync (`?example=<id>`).
+- **Parameters** (toolbar, when the scene declares fields): live numeric inputs; values merge with defaults in the worker and rebuild the mesh.
+- **Orientation** / **Above ground** / **Junctions**: toggles for the compass overlay, orbit limits, and junction markers where volumes meet.
+- **Part hover** (multi-part scenes): tooltips use `scenePartNames` from each example.
+
+CAD runs in a **Web Worker** ([`src/worker.ts`](src/worker.ts)): OpenCascade + Replicad, exposed to the UI via [Comlink](https://github.com/GoogleChromeLabs/comlink) (`listExamples`, `createMesh(exampleId, paramValues?)`).
+
+## GitHub Pages
+
+Production builds use **`base: "./"`** in [`vite.config.ts`](vite.config.ts) so asset URLs are **relative** (`./assets/...`). That works for a **project site** at `https://<user>.github.io/<repo>/` without hard-coding the repo name.
+
+1. Push this repo to GitHub (including [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)).
+2. In the repo on GitHub: **Settings → Pages → Build and deployment → Source**: choose **GitHub Actions** (not “Deploy from a branch”).
+3. Push to **`main`**. The workflow runs `npm ci`, `npm run build`, and publishes **`dist/`** to Pages.
+4. After the first successful run, the site URL is shown on the workflow run and under **Settings → Pages** (typically `https://<user>.github.io/<repo>/`).
+
+To confirm locally: `npm run build` then `npm run preview` and open the printed URL.
+
 ## Local-first runtime (no remote scripts)
 
 - **HTML** loads a single local module entry (`/src/main.ts` in dev, hashed `./assets/*.js` after `npm run build`).
@@ -29,21 +51,27 @@ Open the URL Vite prints (default `http://localhost:5173`). Orbit: drag to rotat
 
 | Path | Role |
 |------|------|
-| [`cad/`](cad/) | All CAD modeling code: [`cad/components`](cad/components) (reusable shapes) and [`cad/project`](cad/project) (scenes + registry). |
-| [`cad/project/examples/`](cad/project/examples/) | One `.ts` file per **scene**; auto-registered by [`cad/project/registry.ts`](cad/project/registry.ts). |
-| [`src/worker.ts`](src/worker.ts) | Loads OpenCascade WASM; `listExamples` + `createMesh(id)` via [Comlink](https://github.com/GoogleChromeLabs/comlink). |
-| [`src/main.ts`](src/main.ts) | Three.js viewer, example picker, `?example=` URL sync. |
-| [`docs/ui-behavior.md`](docs/ui-behavior.md) | **Viewer UI contract:** canvas (3D orbit) vs scene orientation panel (plan drag)—how they must not fight. |
+| [`cad/components/`](cad/components/) | Reusable solids: **house**, **pergola**, **ground**, shared **houseLayout** (corners + extension layout). |
+| [`cad/project/examples/`](cad/project/examples/) | One file per **scene** (e.g. **`patio`**, **`minimal-cube`**); auto-registered by [`cad/project/registry.ts`](cad/project/registry.ts). |
+| [`cad/project/types.ts`](cad/project/types.ts) | `ExampleMeta`, `ExampleParamsSchema`, `ParamField`. |
+| [`cad/project/exampleParams.ts`](cad/project/exampleParams.ts) | `mergeExampleParams`, `EMPTY_EXAMPLE_PARAM_SCHEMA`. |
+| [`cad/deriveJunctions.ts`](cad/deriveJunctions.ts) | Derives labeled junction points from scene bounding boxes. |
+| [`src/worker.ts`](src/worker.ts) | WASM + `createMesh` / `listExamples`. |
+| [`src/main.ts`](src/main.ts) | Three.js scene, camera, mesh sync. |
+| [`src/toolbar.ts`](src/toolbar.ts) | Scene picker + view toggles. |
+| [`src/paramPanel.ts`](src/paramPanel.ts) | Dynamic form from each example’s `exampleParamSchema`. |
+| [`src/compass.ts`](src/compass.ts), [`src/junctions.ts`](src/junctions.ts), [`src/tooltips.ts`](src/tooltips.ts) | Orientation overlay, junction columns, part hover. |
+| [`docs/ui-behavior.md`](docs/ui-behavior.md) | Viewer UI contract: canvas orbit vs orientation panel. |
 
-Add a file under `cad/project/examples/`, save, and choose it from the **Example** dropdown (or open `?example=your-id`). The default scene is **`patio`** (see `defaultExampleId` in [`cad/project/registry.ts`](cad/project/registry.ts)). Vite HMR reloads when you edit an example.
+**Default scene** is **`patio`** (`defaultExampleId` in [`cad/project/registry.ts`](cad/project/registry.ts)). Add a file under `cad/project/examples/`, export `buildScene` and optional `exampleParamSchema`, save — Vite HMR reloads. See [`cad/project/README.md`](cad/project/README.md) for the full example contract.
 
 ## Export
 
 For STL/STEP from code, see Replicad’s [use as a library](https://replicad.xyz/docs/use-as-a-library/) (e.g. `blobSTL()` on shapes in a worker or Node context). This scaffold focuses on the live preview.
 
-## Dependencies (pinned to latest stable at install time)
+## Dependencies
 
-Check [`package.json`](package.json) for exact versions. To refresh everything later:
+Versions are pinned in [`package.json`](package.json). To refresh packages later:
 
 ```bash
 npx npm-check-updates -u && npm install
