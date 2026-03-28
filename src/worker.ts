@@ -51,8 +51,11 @@ function createMesh(exampleId?: string): Promise<MeshPayload> {
   });
 }
 
-function listExamples(): ExampleMeta[] {
-  return examples.map(({ id, title, description }) => ({ id, title, description }));
+function listExamples(): { examples: ExampleMeta[]; defaultId: string } {
+  return {
+    examples: examples.map(({ id, title, description }) => ({ id, title, description })),
+    defaultId: defaultExampleId,
+  };
 }
 
 expose({ createMesh, listExamples });

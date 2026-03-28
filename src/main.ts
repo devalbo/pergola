@@ -21,7 +21,7 @@ import type { ExampleMeta } from "../cad/project/types";
 import type { MeshPayload } from "./worker";
 
 type ViewerApi = {
-  listExamples: () => ExampleMeta[];
+  listExamples: () => Promise<{ examples: ExampleMeta[]; defaultId: string }>;
   createMesh: (exampleId?: string) => Promise<MeshPayload>;
 };
 
@@ -153,14 +153,14 @@ window.addEventListener("resize", () => {
 });
 
 async function bootstrap(): Promise<void> {
-  const list = await api.listExamples();
+  const { examples: list, defaultId } = await api.listExamples();
   if (list.length === 0) {
     throw new Error("No examples found under cad/project/examples/");
   }
 
   const fromUrl = readExampleFromUrl();
   const initialId =
-    fromUrl !== undefined && list.some((e) => e.id === fromUrl) ? fromUrl : list[0].id;
+    fromUrl !== undefined && list.some((e) => e.id === fromUrl) ? fromUrl : defaultId;
 
   await loadMesh(initialId);
 

@@ -34,7 +34,7 @@ Open the URL Vite prints (default `http://localhost:5173`). Orbit: drag to rotat
 | [`src/worker.ts`](src/worker.ts) | Loads OpenCascade WASM; `listExamples` + `createMesh(id)` via [Comlink](https://github.com/GoogleChromeLabs/comlink). |
 | [`src/main.ts`](src/main.ts) | Three.js viewer, example picker, `?example=` URL sync. |
 
-Add a file under `cad/project/examples/`, save, and choose it from the **Example** dropdown (or open `?example=your-id`). Vite HMR reloads when you edit an example.
+Add a file under `cad/project/examples/`, save, and choose it from the **Example** dropdown (or open `?example=your-id`). The default scene is **`patio`** (see `defaultExampleId` in [`cad/project/registry.ts`](cad/project/registry.ts)). Vite HMR reloads when you edit an example.
 
 ## Export
 
