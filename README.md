@@ -8,12 +8,14 @@
 
 ## Setup
 
-From this directory:
+Clone or copy the repository, then from the project root:
 
 ```bash
 npm install
 npm run dev
 ```
+
+`node_modules/` and `dist/` are gitignored; run `npm install` on every new clone or machine.
 
 Open the URL Vite prints (default `http://localhost:5173`). Orbit: drag to rotate, scroll to zoom.
 
