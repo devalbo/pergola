@@ -35,6 +35,8 @@ const scene = new Scene();
 scene.background = new Color(0x87b5d4);
 
 const camera = new PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.08, 500);
+// Replicad is Z-up (ground in XY, height along Z). Three.js defaults to Y-up without this.
+camera.up.set(0, 0, 1);
 camera.position.set(14, 11, 16);
 
 const renderer = new WebGLRenderer({ antialias: true });
@@ -45,20 +47,23 @@ renderer.shadowMap.type = PCFShadowMap;
 document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 1.5, 0);
+controls.target.set(0, 0, 1.5);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.update();
 
 const sun = new DirectionalLight(0xfff5e6, 1.35);
-sun.position.set(20, 28, 14);
+// Z-up: light mainly from above (+Z) with XY offset for readable shadows on the ground
+sun.position.set(18, 14, 36);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 scene.add(sun);
 scene.add(new AmbientLight(0xb4c9e8, 0.45));
 
-const grid = new GridHelper(40, 40, 0x5a7a8f, 0x3d5566);
-grid.position.y = -0.001;
+// Default GridHelper lies in XZ (Y-up); rotate to XY so it matches Replicad’s ground (z ≈ 0).
+const grid = new GridHelper(56, 56, 0x5a7a8f, 0x3d5566);
+grid.rotation.x = Math.PI / 2;
+grid.position.z = 0.002;
 scene.add(grid);
 
 const cadRoot = new Group();
