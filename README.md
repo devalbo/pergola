@@ -19,6 +19,12 @@ npm run dev
 
 Open the URL Vite prints (default `http://localhost:5173`). Orbit: drag to rotate, scroll to zoom.
 
+## Local-first runtime (no remote scripts)
+
+- **HTML** loads a single local module entry (`/src/main.ts` in dev, hashed `./assets/*.js` after `npm run build`).
+- **Three.js, Comlink, Replicad, and the OpenCascade `.wasm` bundle** all come from `node_modules` and are emitted into your dev server or `dist/`; the app does not pull scripts from CDNs or third-party URLs at runtime.
+- **`npm install`** is the only step that uses the network, to download packages; after that you can work offline. To serve the built app locally: `npm run build` then `npm run preview` (or any static file server pointed at `dist/`).
+
 ## Project layout
 
 | Path | Role |
