@@ -1,84 +1,88 @@
 import type { Shape3D } from "replicad";
 import {
-  buildExtension,
   buildGroundPlane,
-  buildHouse,
+  buildHouseBody,
+  buildHouseExtension,
+  buildHouseRoof,
   buildPergolaCanopy,
   buildPergolaPosts,
-  defaultExtensionLayout,
-  defaultHouseLayout,
   defaultPergolaParams,
-  extensionLayoutForHouse,
+  extensionLayoutFromParams,
+  houseParamsToLayout,
   pergolaCenterFromOuterSwCorner,
   pergolaPostCornerBoxes,
+  type HouseParams,
   type PergolaParams,
 } from "../../components";
 import { deriveJunctions, type NamedBox } from "../../deriveJunctions";
 import type { NamedScenePoint } from "../../namedScenePoint";
-import type { ExampleMeta } from "../types";
+import { mergeExampleParams } from "../exampleParams";
+import type { ExampleMeta, ExampleParamsSchema } from "../types";
 
 export const exampleMeta: ExampleMeta = {
   id: "patio",
   title: "Patio (house + pergola)",
   description:
-    "Feet throughout: ground, house, morning room extension, 16×16 ft pergola at exterior corner (Z-up).",
+    "Ground, parametric house (sketch + extrude), morning room, pergola at exterior corner (feet, Z-up).",
+};
+
+/** Declares the interactive form for this example (feet). */
+export const exampleParamSchema: ExampleParamsSchema = {
+  fields: [
+    {
+      id: "pergolaHeightFt",
+      label: "Pergola height (ft)",
+      min: 6,
+      max: 18,
+      step: 0.5,
+      default: 10,
+    },
+    {
+      id: "eaveAbovePergolaFt",
+      label: "Eave clearance above pergola (ft)",
+      min: 0,
+      max: 10,
+      step: 0.25,
+      default: 2,
+    },
+    {
+      id: "pergolaSpanFt",
+      label: "Pergola post grid span (ft)",
+      min: 8,
+      max: 28,
+      step: 0.5,
+      default: 16,
+    },
+    {
+      id: "roofBlockHeightFt",
+      label: "Roof block height (ft)",
+      min: 2,
+      max: 10,
+      step: 0.5,
+      default: 4,
+    },
+  ],
 };
 
 const WOOD = 0xa67c52;
 
-/** Per-part colors (Three.js hex): ground, house, morning room, four legs, canopy. */
-export const scenePartColors = [
-  0x3d8c40, // lawn green
-  0xffffff, // white siding — main body
-  0xffffff, // white siding — extension
-  WOOD,
-  WOOD,
-  WOOD,
-  WOOD,
-  WOOD,
-];
-
-/** Hover tooltips (same order as `scenePartColors`). */
-export const scenePartNames = [
-  "Ground",
-  "House",
-  "Morning room",
-  "Pergola leg 1",
-  "Pergola leg 2",
-  "Pergola leg 3",
-  "Pergola leg 4",
-  "Pergola canopy",
-];
-
-/**
- * Derive junction points automatically from component bounding boxes.
- * Any corner shared by 2+ boxes becomes a named point with a compass/height label.
- */
-export function sceneNamedPoints(): NamedScenePoint[] {
-  const house = defaultHouseLayout;
-  const ext = extensionLayoutForHouse(house);
-  const pp = { ...defaultPergolaParams, ...pergolaParamsForPatio() };
-  const postBoxes = pergolaPostCornerBoxes(pp);
-  const postNames = ["Pergola leg 1", "Pergola leg 2", "Pergola leg 3", "Pergola leg 4"];
-
-  const boxes: NamedBox[] = [
-    { name: "House", min: house.bodyMin, max: house.bodyMax },
-    { name: "Roof", min: house.roofMin, max: house.roofMax },
-    { name: "Morning room", min: ext.min, max: ext.max },
-    ...postBoxes.map(([min, max], i) => ({ name: postNames[i], min, max })),
-  ];
-
-  return deriveJunctions(boxes);
+function mergeParams(overrides?: Record<string, number>): Record<string, number> {
+  return mergeExampleParams(exampleParamSchema, overrides);
 }
 
-/**
- * 16×16 ft post grid: **outer SW corner** of the grid meets the morning room’s NW corner
- * (where house east face meets extension north edge) so leg 1 is at the House · Morning room junction.
- */
-function pergolaParamsForPatio(): Partial<PergolaParams> {
-  const span = 16;
-  const extMinX = defaultExtensionLayout.min[0]; // house east face
-  const extMaxY = defaultExtensionLayout.max[1]; // extension north edge
+function houseParamsFromMerged(merged: Record<string, number>): Partial<HouseParams> {
+  return {
+    wallHeightFt: merged.pergolaHeightFt + merged.eaveAbovePergolaFt,
+    roofBlockHeightFt: merged.roofBlockHeightFt,
+  };
+}
+
+function pergolaParamsForPatio(merged: Record<string, number>): Partial<PergolaParams> {
+  const hp = houseParamsFromMerged(merged);
+  const ext = extensionLayoutFromParams(hp);
+  const span = merged.pergolaSpanFt;
+  const extMinX = ext.min[0];
+  const extMaxY = ext.max[1];
   const { centerX, centerY } = pergolaCenterFromOuterSwCorner(extMinX, extMaxY, span);
 
   return {
@@ -86,30 +90,69 @@ function pergolaParamsForPatio(): Partial<PergolaParams> {
     centerY,
     span,
     postSize: 6 / 12,
-    height: 10,
+    height: merged.pergolaHeightFt,
     rafterCount: 9,
     beamThickness: 8 / 12,
   };
 }
 
-/**
- * Separate solids so the viewer can assign materials and per-leg hover labels.
- */
-export function buildSceneParts(): Shape3D[] {
-  const pp = pergolaParamsForPatio();
+export const scenePartColors = [
+  0x3d8c40,
+  0xffffff,
+  0x9e9e9e,
+  0xffffff,
+  WOOD,
+  WOOD,
+  WOOD,
+  WOOD,
+  WOOD,
+];
+
+export const scenePartNames = [
+  "Ground",
+  "House body",
+  "House roof",
+  "House morning room",
+  "Pergola leg 1",
+  "Pergola leg 2",
+  "Pergola leg 3",
+  "Pergola leg 4",
+  "Pergola canopy",
+];
+
+export function sceneNamedPoints(paramValues?: Record<string, number>): NamedScenePoint[] {
+  const merged = mergeParams(paramValues);
+  const hp = houseParamsFromMerged(merged);
+  const house = houseParamsToLayout(hp);
+  const ext = extensionLayoutFromParams(hp);
+  const pp = { ...defaultPergolaParams, ...pergolaParamsForPatio(merged) };
+  const postBoxes = pergolaPostCornerBoxes(pp);
+  const postNames = ["Pergola leg 1", "Pergola leg 2", "Pergola leg 3", "Pergola leg 4"];
+
+  const boxes: NamedBox[] = [
+    { name: "House body", group: "house", min: house.bodyMin, max: house.bodyMax },
+    { name: "House roof", group: "house", min: house.roofMin, max: house.roofMax },
+    { name: "House morning room", group: "house", min: ext.min, max: ext.max },
+    ...postBoxes.map(([min, max], i) => ({ name: postNames[i], min, max })),
+  ];
+
+  return deriveJunctions(boxes);
+}
+
+export function buildSceneParts(paramValues?: Record<string, number>): Shape3D[] {
+  const merged = mergeParams(paramValues);
+  const hp = houseParamsFromMerged(merged);
+  const pp = { ...defaultPergolaParams, ...pergolaParamsForPatio(merged) };
   return [
     buildGroundPlane(),
-    buildHouse(),
-    buildExtension(),
+    buildHouseBody(hp),
+    buildHouseRoof(hp),
+    buildHouseExtension({}, hp),
     ...buildPergolaPosts(pp),
     buildPergolaCanopy(pp),
   ];
 }
 
-/**
- * Z-up scene: ground in XY, walls/posts along Z.
- */
-export function buildScene(): Shape3D {
-  const parts = buildSceneParts();
-  return parts.reduce((a, b) => a.fuse(b));
+export function buildScene(paramValues?: Record<string, number>): Shape3D {
+  return buildSceneParts(paramValues).reduce((a, b) => a.fuse(b));
 }

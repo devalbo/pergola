@@ -6,7 +6,8 @@ import type { Shape3D } from "replicad";
 import { setOC } from "replicad";
 import type { ExampleDefinition } from "../cad/project/registry";
 import { defaultExampleId, examples, getExampleById } from "../cad/project/registry";
-import type { ExampleMeta } from "../cad/project/types";
+import { mergeExampleParams } from "../cad/project/exampleParams";
+import type { ExampleListItem } from "../cad/project/types";
 import type { NamedScenePoint } from "../cad/namedScenePoint";
 
 type OpencascadeModule = (opts?: {
@@ -58,7 +59,7 @@ function resolveExampleId(requested?: string): string {
   return defaultExampleId;
 }
 
-function createMesh(exampleId?: string): Promise<MeshResult> {
+function createMesh(exampleId?: string, paramValues?: Record<string, number>): Promise<MeshResult> {
   return started.then(() => {
     const id = resolveExampleId(exampleId);
     const ex = getExampleById(id);
@@ -66,14 +67,16 @@ function createMesh(exampleId?: string): Promise<MeshResult> {
       throw new Error(`Unknown example: ${exampleId ?? "(none)"}`);
     }
 
-    const namedPoints: NamedScenePoint[] = ex.sceneNamedPoints?.() ?? [];
+    const merged = mergeExampleParams(ex.paramSchema, paramValues);
+
+    const namedPoints: NamedScenePoint[] = ex.sceneNamedPoints?.(merged) ?? [];
 
     if (
       ex.buildSceneParts &&
       ex.scenePartColors &&
       ex.scenePartColors.length > 0
     ) {
-      const shapes = ex.buildSceneParts();
+      const shapes = ex.buildSceneParts(merged);
       const n = Math.min(shapes.length, ex.scenePartColors.length);
       const parts = shapes.slice(0, n).map((s) => meshPayloadFromShape(s));
       const colors = ex.scenePartColors.slice(0, n);
@@ -82,7 +85,7 @@ function createMesh(exampleId?: string): Promise<MeshResult> {
       return { kind: "parts", parts, colors, partNames, partAnimations, namedPoints };
     }
 
-    const shape = ex.buildScene();
+    const shape = ex.buildScene(merged);
     return {
       kind: "single",
       payload: meshPayloadFromShape(shape),
@@ -92,9 +95,14 @@ function createMesh(exampleId?: string): Promise<MeshResult> {
   });
 }
 
-function listExamples(): { examples: ExampleMeta[]; defaultId: string } {
+function listExamples(): { examples: ExampleListItem[]; defaultId: string } {
   return {
-    examples: examples.map(({ id, title, description }) => ({ id, title, description })),
+    examples: examples.map((e) => ({
+      id: e.id,
+      title: e.title,
+      description: e.description,
+      paramSchema: e.paramSchema,
+    })),
     defaultId: defaultExampleId,
   };
 }

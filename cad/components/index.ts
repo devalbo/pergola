@@ -1,13 +1,23 @@
 export { buildGroundPlane, defaultGroundParams, type GroundParams } from "./ground";
 export {
-  buildExtension,
-  buildHouse,
-  buildHouseWithExtension,
-  defaultExtensionLayout,
-  defaultHouseLayout,
+  buildExtensionBox,
+  defaultExtensionHeightFt,
   extensionLayoutForHouse,
   type ExtensionLayout,
   type HouseLayout,
+} from "./houseLayout";
+export {
+  buildHouse,
+  buildHouseBody,
+  buildHouseExtension,
+  buildHouseRoof,
+  buildHouseWithExtension,
+  defaultHouseExtensionLayout,
+  defaultHouseLayout,
+  defaultHouseParams,
+  extensionLayoutFromParams,
+  houseParamsToLayout,
+  type HouseParams,
 } from "./house";
 export {
   buildPergola,

@@ -15,4 +15,4 @@ Reusable **parametric parts** (house, pergola, …) that **scenes** under [`../p
 
 ## Used by
 
-[`../project/examples/patio.ts`](../project/examples/patio.ts) — `buildGroundPlane()`, `buildHouseWithExtension()`, and `buildPergola()` (corner placement from `defaultExtensionLayout`).
+[`../project/examples/patio.ts`](../project/examples/patio.ts) — `buildGroundPlane()`, `buildHouse*`, and `buildPergola()` (corner placement from `defaultHouseExtensionLayout`).

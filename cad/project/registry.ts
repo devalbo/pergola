@@ -1,18 +1,22 @@
 import type { Shape3D } from "replicad";
 import type { NamedScenePoint } from "../namedScenePoint";
-import type { ExampleMeta } from "./types";
+import { EMPTY_EXAMPLE_PARAM_SCHEMA } from "./exampleParams";
+import type { ExampleMeta, ExampleParamsSchema } from "./types";
 
 export type ExampleDefinition = ExampleMeta & {
-  buildScene: () => Shape3D;
+  /** Always pass merged params from {@link mergeExampleParams} in the worker (see `cad/project/exampleParams.ts`). */
+  buildScene: (paramValues?: Record<string, number>) => Shape3D;
   /** When set with `scenePartColors`, the viewer meshes parts separately for materials. */
-  buildSceneParts?: () => Shape3D[];
+  buildSceneParts?: (paramValues?: Record<string, number>) => Shape3D[];
   scenePartColors?: number[];
   /** Labels for hover tooltips; same order and length as `buildSceneParts` / `scenePartColors`. */
   scenePartNames?: string[];
   /** Per-part animation effects (null = static); same order as `buildSceneParts`. */
   scenePartAnimations?: (string | null)[];
   /** Junction / reference points (feet); see `cad/sceneOrientation.ts` for N/S/E/W. */
-  sceneNamedPoints?: () => NamedScenePoint[];
+  sceneNamedPoints?: (paramValues?: Record<string, number>) => NamedScenePoint[];
+  /** Declares the parameter form (`fields: []` hides the UI control). */
+  paramSchema: ExampleParamsSchema;
 };
 
 const modules = import.meta.glob("./examples/*.ts", { eager: true }) as Record<
@@ -35,14 +39,21 @@ function toDefinition(path: string, mod: Record<string, unknown>): ExampleDefini
   const scenePartNames = mod.scenePartNames;
   const scenePartAnimations = mod.scenePartAnimations;
   const sceneNamedPoints = mod.sceneNamedPoints;
+  const paramSchema = mod.exampleParamSchema as ExampleParamsSchema | undefined;
 
   return {
     id: meta?.id ?? slug,
     title: meta?.title ?? slug,
     description: meta?.description,
-    buildScene: buildScene as () => Shape3D,
+    buildScene: buildScene as (paramValues?: Record<string, number>) => Shape3D,
     buildSceneParts:
-      typeof buildSceneParts === "function" ? (buildSceneParts as () => Shape3D[]) : undefined,
+      typeof buildSceneParts === "function"
+        ? (buildSceneParts as (paramValues?: Record<string, number>) => Shape3D[])
+        : undefined,
+    paramSchema:
+      paramSchema && Array.isArray(paramSchema.fields)
+        ? (paramSchema as ExampleParamsSchema)
+        : EMPTY_EXAMPLE_PARAM_SCHEMA,
     scenePartColors: Array.isArray(scenePartColors)
       ? (scenePartColors as number[])
       : undefined,
@@ -52,7 +63,7 @@ function toDefinition(path: string, mod: Record<string, unknown>): ExampleDefini
       : undefined,
     sceneNamedPoints:
       typeof sceneNamedPoints === "function"
-        ? (sceneNamedPoints as () => NamedScenePoint[])
+        ? (sceneNamedPoints as (paramValues?: Record<string, number>) => NamedScenePoint[])
         : undefined,
   };
 }
