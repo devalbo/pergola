@@ -54,6 +54,7 @@ export function buildExampleToolbar(
   }
 
   select.value = items.some((i) => i.id === initialId) ? initialId : items[0]?.id ?? "";
+
   select.addEventListener("change", () => {
     const id = select.value;
     setExampleInUrl(id);
@@ -133,6 +134,7 @@ export function buildExampleToolbar(
   syncJuncButton();
 
   bar.append(select, orientBtn, aboveBtn, juncBtn);
+
   document.body.appendChild(bar);
   return bar;
 }

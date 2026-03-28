@@ -5,8 +5,9 @@ export type ExampleMeta = {
   description?: string;
 };
 
-/** One numeric field for the viewer parameter form (feet unless noted in the label). */
-export type ParamField = {
+/** Numeric field for the viewer parameter form. */
+export type ParamFieldNumber = {
+  kind?: "number";
   id: string;
   label: string;
   min?: number;
@@ -14,6 +15,17 @@ export type ParamField = {
   step?: number;
   default: number;
 };
+
+/** Dropdown field; values are still serialized as numbers for the worker. */
+export type ParamFieldChoice = {
+  kind: "choice";
+  id: string;
+  label: string;
+  default: number;
+  options: { value: number; label: string }[];
+};
+
+export type ParamField = ParamFieldNumber | ParamFieldChoice;
 
 /** Declares interactive inputs for an example; used by the toolbar parameter panel. */
 export type ExampleParamsSchema = {

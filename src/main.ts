@@ -7,7 +7,6 @@ import {
   Color,
   DirectionalLight,
   DoubleSide,
-  GridHelper,
   Group,
   LineBasicMaterial,
   LineSegments,
@@ -16,6 +15,7 @@ import {
   PCFShadowMap,
   PerspectiveCamera,
   Scene,
+  Texture,
   Vector3,
   WebGLRenderer,
 } from "three";
@@ -28,6 +28,9 @@ import { createJunctionSystem } from "./junctions";
 import { setupPartHoverTooltip } from "./tooltips";
 import { createExampleParamPanel } from "./paramPanel";
 import { buildExampleToolbar, readExampleFromUrl, setExampleInUrl } from "./toolbar";
+import { coasterAppearanceFromParams, mergeCoasterParams } from "../cad/project/examples/coaster";
+import { attachCoasterDecal, removeCoasterDecal } from "./coasterDecal";
+import tigerSvgUrl from "../cad/images/Ghostscript_Tiger.svg?url";
 
 // ── Worker API ────────────────────────────────────────────────────
 
@@ -38,6 +41,18 @@ type ViewerApi = {
 
 const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
 const api = wrap<ViewerApi>(worker);
+
+/** Resolved example id for the last `loadMesh` (worker default when arg omitted). */
+let defaultExampleIdCached = "patio";
+let currentExampleId = "patio";
+/** After a successful mesh build; used to frame the camera only when the example id changes. */
+let lastMeshedExampleId: string | null = null;
+/** User-chosen SVG for coaster pattern; falls back to bundled tiger when unset. */
+let customCoasterSvgObjectUrl: string | null = null;
+
+function coasterSvgUrlForDecal(): string {
+  return customCoasterSvgObjectUrl ?? tigerSvgUrl;
+}
 
 // ── Scene scaffolding ─────────────────────────────────────────────
 
@@ -104,8 +119,11 @@ const defaultMat = new MeshStandardMaterial({
 function disposeObject3D(obj: Mesh | LineSegments): void {
   obj.geometry.dispose();
   const m = obj.material;
-  if (Array.isArray(m)) m.forEach((x) => x.dispose());
-  else m.dispose();
+  const mats = Array.isArray(m) ? m : [m];
+  for (const mat of mats) {
+    if ("map" in mat && mat.map) (mat.map as Texture).dispose();
+    mat.dispose();
+  }
 }
 
 function clearCadRoot(): void {
@@ -163,6 +181,9 @@ function frameCameraToStructure(): void {
 // ── Mesh loading ──────────────────────────────────────────────────
 
 async function loadMesh(exampleId?: string, paramValues?: Record<string, number>): Promise<void> {
+  const id = exampleId ?? defaultExampleIdCached;
+  const shouldFrameCamera = lastMeshedExampleId !== id;
+  currentExampleId = id;
   const result = await api.createMesh(exampleId, paramValues);
   clearCadRoot();
 
@@ -171,7 +192,14 @@ async function loadMesh(exampleId?: string, paramValues?: Record<string, number>
     const geom = new BufferGeometry();
     syncFaces(geom, faces);
     const mesh = new Mesh(geom, defaultMat.clone());
-    mesh.material.color.set(0xc49a6c);
+    if (currentExampleId === "coaster") {
+      const cm = coasterAppearanceFromParams(mergeCoasterParams(paramValues));
+      mesh.material.color.set(cm.color);
+      mesh.material.roughness = cm.roughness;
+      mesh.material.metalness = cm.metalness;
+    } else {
+      mesh.material.color.set(0xc49a6c);
+    }
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     if (result.partLabel) mesh.userData.partLabel = result.partLabel;
@@ -181,7 +209,15 @@ async function loadMesh(exampleId?: string, paramValues?: Record<string, number>
     const lines = new LineSegments(lineGeom, edgeMaterial);
     cadRoot.add(mesh, lines);
     junctions.addColumns(result.namedPoints);
-    frameCameraToStructure();
+    await attachCoasterDecal(
+      cadRoot,
+      currentExampleId,
+      coasterSvgUrlForDecal(),
+      renderer,
+      paramValues ?? mergeCoasterParams(),
+    );
+    if (shouldFrameCamera) frameCameraToStructure();
+    lastMeshedExampleId = id;
     return;
   }
 
@@ -225,7 +261,15 @@ async function loadMesh(exampleId?: string, paramValues?: Record<string, number>
   });
 
   junctions.addColumns(result.namedPoints);
-  frameCameraToStructure();
+  await attachCoasterDecal(
+    cadRoot,
+    currentExampleId,
+    coasterSvgUrlForDecal(),
+    renderer,
+    paramValues ?? mergeCoasterParams(),
+  );
+  if (shouldFrameCamera) frameCameraToStructure();
+  lastMeshedExampleId = id;
 }
 
 // ── Animation loop ────────────────────────────────────────────────
@@ -265,14 +309,39 @@ async function bootstrap(): Promise<void> {
   if (list.length === 0) {
     throw new Error("No examples found under cad/project/examples/");
   }
+  defaultExampleIdCached = defaultId;
 
   const fromUrl = readExampleFromUrl();
   const initialId =
     fromUrl !== undefined && list.some((e) => e.id === fromUrl) ? fromUrl : defaultId;
 
-  const paramPanel = createExampleParamPanel(list, (id, values) => {
-    loadMesh(id, values).catch((err) => console.error(err));
-  });
+  const paramPanel = createExampleParamPanel(
+    list,
+    (id, values) => {
+      loadMesh(id, values).catch((err) => console.error(err));
+    },
+    {
+      onPick: (file) => {
+        void handleSvgImport(file);
+      },
+    },
+  );
+
+  async function handleSvgImport(file: File): Promise<void> {
+    const ok = file.name.toLowerCase().endsWith(".svg") || file.type.includes("svg");
+    if (!ok) {
+      console.warn("[svg import] Expected an SVG file.");
+      return;
+    }
+    if (currentExampleId === "coaster") {
+      if (customCoasterSvgObjectUrl) URL.revokeObjectURL(customCoasterSvgObjectUrl);
+      customCoasterSvgObjectUrl = URL.createObjectURL(file);
+      removeCoasterDecal(cadRoot);
+      const pv =
+        paramPanel.getValuesForExample("coaster") ?? mergeCoasterParams();
+      await attachCoasterDecal(cadRoot, "coaster", coasterSvgUrlForDecal(), renderer, pv);
+    }
+  }
   paramPanel.syncToExample(initialId);
   await loadMesh(initialId, paramPanel.getValuesForExample(initialId));
 
