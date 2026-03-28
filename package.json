@@ -1,0 +1,22 @@
+{
+  "name": "pergola",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "comlink": "4.4.2",
+    "replicad": "0.22.1",
+    "replicad-opencascadejs": "0.22.0",
+    "replicad-threejs-helper": "0.22.0",
+    "three": "0.183.2"
+  },
+  "devDependencies": {
+    "@types/three": "0.183.1",
+    "typescript": "6.0.2",
+    "vite": "8.0.3"
+  }
+}
