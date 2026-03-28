@@ -29,13 +29,12 @@ Open the URL Vite prints (default `http://localhost:5173`). Orbit: drag to rotat
 
 | Path | Role |
 |------|------|
-| [`components/`](components/) | Reusable **`buildHouse`**, **`buildPergola`**, etc.; scenes override params and assemble. |
-| [`project/examples/`](project/examples/) | One `.ts` file per **scene**; auto-registered by [`project/registry.ts`](project/registry.ts). |
-| [`project/README.md`](project/README.md) | How to add scenes and use components. |
+| [`cad/`](cad/) | All CAD modeling code: [`cad/components`](cad/components) (reusable shapes) and [`cad/project`](cad/project) (scenes + registry). |
+| [`cad/project/examples/`](cad/project/examples/) | One `.ts` file per **scene**; auto-registered by [`cad/project/registry.ts`](cad/project/registry.ts). |
 | [`src/worker.ts`](src/worker.ts) | Loads OpenCascade WASM; `listExamples` + `createMesh(id)` via [Comlink](https://github.com/GoogleChromeLabs/comlink). |
 | [`src/main.ts`](src/main.ts) | Three.js viewer, example picker, `?example=` URL sync. |
 
-Add a file under `project/examples/`, save, and choose it from the **Example** dropdown (or open `?example=your-id`). Vite HMR reloads when you edit an example.
+Add a file under `cad/project/examples/`, save, and choose it from the **Example** dropdown (or open `?example=your-id`). Vite HMR reloads when you edit an example.
 
 ## Export
 

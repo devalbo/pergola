@@ -3,9 +3,9 @@ import type { OpenCascadeInstance } from "replicad-opencascadejs";
 import opencascade from "replicad-opencascadejs/src/replicad_single.js";
 import opencascadeWasm from "replicad-opencascadejs/src/replicad_single.wasm?url";
 import { setOC } from "replicad";
-import type { ExampleDefinition } from "../project/registry";
-import { defaultExampleId, examples, getExampleById } from "../project/registry";
-import type { ExampleMeta } from "../project/types";
+import type { ExampleDefinition } from "../cad/project/registry";
+import { defaultExampleId, examples, getExampleById } from "../cad/project/registry";
+import type { ExampleMeta } from "../cad/project/types";
 
 type OpencascadeModule = (opts?: {
   locateFile?: (file: string) => string;

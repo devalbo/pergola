@@ -1,10 +1,10 @@
-# CAD examples (`project/`)
+# CAD examples (`cad/project/`)
 
-Scenes live here: each example **imports shapes from [`components/`](../components)**, optionally overrides parameters, and **`fuse`s** (or otherwise combines) them into `buildScene()`.
+Scenes live here: each example **imports shapes from [`../components/`](../components)**, optionally overrides parameters, and **`fuse`s** (or otherwise combines) them into `buildScene()`.
 
 ## Add a new example
 
-1. Create **`project/examples/your-name.ts`** (use a **kebab-case** file name; it becomes the default `id` if you omit `exampleMeta`).
+1. Create **`cad/project/examples/your-name.ts`** (use a **kebab-case** file name; it becomes the default `id` if you omit `exampleMeta`).
 2. Export:
    - **`exampleMeta`** (optional but recommended): `{ id, title, description? }`  
      If `id` is omitted, the file name without `.ts` is used.

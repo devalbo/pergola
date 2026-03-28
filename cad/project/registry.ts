@@ -28,7 +28,7 @@ function toDefinition(path: string, mod: Record<string, unknown>): ExampleDefini
   };
 }
 
-/** Every module under project/examples/*.ts that exports buildScene() is registered here. */
+/** Every module under cad/project/examples/*.ts that exports buildScene() is registered here. */
 export const examples: ExampleDefinition[] = Object.entries(modules)
   .map(([path, mod]) => toDefinition(path, mod))
   .filter((x): x is ExampleDefinition => x !== null)

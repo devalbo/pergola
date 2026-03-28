@@ -10,7 +10,7 @@ export const exampleMeta: ExampleMeta = {
 
 /**
  * Outdoor scene: house and pergola side by side.
- * Adjust layout here (e.g. nudge `buildHouse({ bodyMin: [...] })`) or change defaults in `components/`.
+ * Adjust layout here (e.g. nudge `buildHouse({ bodyMin: [...] })`) or change defaults in `cad/components/`.
  */
 export function buildScene(): Shape3D {
   return buildHouse().fuse(buildPergola());

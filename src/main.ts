@@ -17,7 +17,7 @@ import {
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { syncFaces, syncLines, syncLinesFromFaces } from "replicad-threejs-helper";
-import type { ExampleMeta } from "../project/types";
+import type { ExampleMeta } from "../cad/project/types";
 import type { MeshPayload } from "./worker";
 
 type ViewerApi = {
@@ -155,7 +155,7 @@ window.addEventListener("resize", () => {
 async function bootstrap(): Promise<void> {
   const list = await api.listExamples();
   if (list.length === 0) {
-    throw new Error("No examples found under project/examples/");
+    throw new Error("No examples found under cad/project/examples/");
   }
 
   const fromUrl = readExampleFromUrl();

@@ -15,5 +15,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "project/**/*.ts", "components/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "cad/**/*.ts"]
 }
