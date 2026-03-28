@@ -27,3 +27,32 @@ export function buildHouse(layout: Partial<HouseLayout> = {}): Shape3D {
   const roof = makeBox(L.roofMin, L.roofMax);
   return body.fuse(roof);
 }
+
+/** Single-story extension (flat roof massing), axis-aligned, walls vertical along Z. */
+export type ExtensionLayout = {
+  min: [number, number, number];
+  max: [number, number, number];
+};
+
+/**
+ * Default extension: continues from the main body’s east face (x = −4.2) toward +X,
+ * with a slightly wider Y range to form an L-shaped footprint with the main block.
+ */
+export const defaultExtensionLayout: ExtensionLayout = {
+  min: [-4.2, -1.2, 0],
+  max: [3.6, 4.8, 3.05],
+};
+
+export function buildExtension(layout: Partial<ExtensionLayout> = {}): Shape3D {
+  const L = { ...defaultExtensionLayout, ...layout };
+  return makeBox(L.min, L.max);
+}
+
+/** Main house fused with one-story extension (shared verticals, perpendicular to ground). */
+export function buildHouseWithExtension(
+  houseLayout: Partial<HouseLayout> = {},
+  extensionLayout: Partial<ExtensionLayout> = {},
+): Shape3D {
+  return buildHouse(houseLayout).fuse(buildExtension(extensionLayout));
+}
+

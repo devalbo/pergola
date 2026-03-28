@@ -2,6 +2,7 @@ import { expose } from "comlink";
 import type { OpenCascadeInstance } from "replicad-opencascadejs";
 import opencascade from "replicad-opencascadejs/src/replicad_single.js";
 import opencascadeWasm from "replicad-opencascadejs/src/replicad_single.wasm?url";
+import type { Shape3D } from "replicad";
 import { setOC } from "replicad";
 import type { ExampleDefinition } from "../cad/project/registry";
 import { defaultExampleId, examples, getExampleById } from "../cad/project/registry";
@@ -31,23 +32,44 @@ export type MeshPayload = {
   edges: ReturnType<Built["meshEdges"]>;
 };
 
+export type MeshResult =
+  | { kind: "single"; payload: MeshPayload }
+  | { kind: "parts"; parts: MeshPayload[]; colors: number[] };
+
+function meshPayloadFromShape(shape: Shape3D): MeshPayload {
+  return {
+    faces: shape.mesh(),
+    edges: shape.meshEdges(),
+  };
+}
+
 function resolveExampleId(requested?: string): string {
   if (requested && getExampleById(requested)) return requested;
   return defaultExampleId;
 }
 
-function createMesh(exampleId?: string): Promise<MeshPayload> {
+function createMesh(exampleId?: string): Promise<MeshResult> {
   return started.then(() => {
     const id = resolveExampleId(exampleId);
     const ex = getExampleById(id);
     if (!ex) {
       throw new Error(`Unknown example: ${exampleId ?? "(none)"}`);
     }
+
+    if (
+      ex.buildSceneParts &&
+      ex.scenePartColors &&
+      ex.scenePartColors.length > 0
+    ) {
+      const shapes = ex.buildSceneParts();
+      const n = Math.min(shapes.length, ex.scenePartColors.length);
+      const parts = shapes.slice(0, n).map((s) => meshPayloadFromShape(s));
+      const colors = ex.scenePartColors.slice(0, n);
+      return { kind: "parts", parts, colors };
+    }
+
     const shape = ex.buildScene();
-    return {
-      faces: shape.mesh(),
-      edges: shape.meshEdges(),
-    };
+    return { kind: "single", payload: meshPayloadFromShape(shape) };
   });
 }
 

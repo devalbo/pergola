@@ -3,6 +3,9 @@ import type { ExampleMeta } from "./types";
 
 export type ExampleDefinition = ExampleMeta & {
   buildScene: () => Shape3D;
+  /** When set with `scenePartColors`, the viewer meshes parts separately for materials. */
+  buildSceneParts?: () => Shape3D[];
+  scenePartColors?: number[];
 };
 
 const modules = import.meta.glob("./examples/*.ts", { eager: true }) as Record<
@@ -20,11 +23,19 @@ function toDefinition(path: string, mod: Record<string, unknown>): ExampleDefini
   const slug = path.replace(/^\.\/examples\//, "").replace(/\.ts$/, "");
   const meta = mod.exampleMeta as Partial<ExampleMeta> | undefined;
 
+  const buildSceneParts = mod.buildSceneParts;
+  const scenePartColors = mod.scenePartColors;
+
   return {
     id: meta?.id ?? slug,
     title: meta?.title ?? slug,
     description: meta?.description,
     buildScene: buildScene as () => Shape3D,
+    buildSceneParts:
+      typeof buildSceneParts === "function" ? (buildSceneParts as () => Shape3D[]) : undefined,
+    scenePartColors: Array.isArray(scenePartColors)
+      ? (scenePartColors as number[])
+      : undefined,
   };
 }
 

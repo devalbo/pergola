@@ -6,11 +6,12 @@ import {
   DirectionalLight,
   DoubleSide,
   GridHelper,
+  Group,
   LineBasicMaterial,
   LineSegments,
   Mesh,
   MeshStandardMaterial,
-  PCFSoftShadowMap,
+  PCFShadowMap,
   PerspectiveCamera,
   Scene,
   WebGLRenderer,
@@ -18,11 +19,11 @@ import {
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { syncFaces, syncLines, syncLinesFromFaces } from "replicad-threejs-helper";
 import type { ExampleMeta } from "../cad/project/types";
-import type { MeshPayload } from "./worker";
+import type { MeshPayload, MeshResult } from "./worker";
 
 type ViewerApi = {
   listExamples: () => Promise<{ examples: ExampleMeta[]; defaultId: string }>;
-  createMesh: (exampleId?: string) => Promise<MeshPayload>;
+  createMesh: (exampleId?: string) => Promise<MeshResult>;
 };
 
 const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
@@ -38,7 +39,7 @@ const renderer = new WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = PCFSoftShadowMap;
+renderer.shadowMap.type = PCFShadowMap;
 document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -56,23 +57,32 @@ const grid = new GridHelper(40, 40, 0x5a7a8f, 0x3d5566);
 grid.position.y = -0.001;
 scene.add(grid);
 
-const bodyGeometry = new BufferGeometry();
-const edgeMaterial = new LineBasicMaterial({ color: 0x1a1a22 });
-const lineGeometry = new BufferGeometry();
-const lines = new LineSegments(lineGeometry, edgeMaterial);
+const cadRoot = new Group();
+scene.add(cadRoot);
 
-const bodyMaterial = new MeshStandardMaterial({
+const edgeMaterial = new LineBasicMaterial({ color: 0x1a1a22 });
+
+const defaultMat = new MeshStandardMaterial({
   color: 0xc49a6c,
-  roughness: 0.62,
-  metalness: 0.05,
+  roughness: 0.58,
+  metalness: 0.06,
   side: DoubleSide,
 });
-const bodyMesh = new Mesh(bodyGeometry, bodyMaterial);
-bodyMesh.castShadow = true;
-bodyMesh.receiveShadow = true;
-lines.castShadow = true;
-scene.add(bodyMesh);
-scene.add(lines);
+
+function disposeObject3D(obj: Mesh | LineSegments): void {
+  obj.geometry.dispose();
+  const m = obj.material;
+  if (Array.isArray(m)) m.forEach((x) => x.dispose());
+  else m.dispose();
+}
+
+function clearCadRoot(): void {
+  while (cadRoot.children.length > 0) {
+    const ch = cadRoot.children[0];
+    if (ch instanceof Mesh || ch instanceof LineSegments) disposeObject3D(ch);
+    cadRoot.remove(ch);
+  }
+}
 
 function readExampleFromUrl(): string | undefined {
   return new URLSearchParams(window.location.search).get("example") ?? undefined;
@@ -135,10 +145,45 @@ function buildExampleToolbar(
 }
 
 async function loadMesh(exampleId?: string): Promise<void> {
-  const { faces, edges } = await api.createMesh(exampleId);
-  syncFaces(bodyGeometry, faces);
-  if (edges) syncLines(lineGeometry, edges);
-  else syncLinesFromFaces(lineGeometry, bodyGeometry);
+  const result = await api.createMesh(exampleId);
+  clearCadRoot();
+
+  if (result.kind === "single") {
+    const { faces, edges } = result.payload;
+    const geom = new BufferGeometry();
+    syncFaces(geom, faces);
+    const mesh = new Mesh(geom, defaultMat.clone());
+    mesh.material.color.set(0xc49a6c);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    const lineGeom = new BufferGeometry();
+    if (edges) syncLines(lineGeom, edges);
+    else syncLinesFromFaces(lineGeom, geom);
+    const lines = new LineSegments(lineGeom, edgeMaterial);
+    cadRoot.add(mesh, lines);
+    return;
+  }
+
+  result.parts.forEach((payload: MeshPayload, i: number) => {
+    const { faces, edges } = payload;
+    const geom = new BufferGeometry();
+    syncFaces(geom, faces);
+    const mat = new MeshStandardMaterial({
+      color: result.colors[i],
+      roughness: i === 1 ? 0.38 : 0.58,
+      metalness: i === 1 ? 0 : 0.07,
+      side: DoubleSide,
+    });
+    const mesh = new Mesh(geom, mat);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    cadRoot.add(mesh);
+
+    const lineGeom = new BufferGeometry();
+    if (edges) syncLines(lineGeom, edges);
+    else syncLinesFromFaces(lineGeom, geom);
+    cadRoot.add(new LineSegments(lineGeom, edgeMaterial));
+  });
 }
 
 function animate(): void {
