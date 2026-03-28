@@ -3,7 +3,9 @@ import type { OpenCascadeInstance } from "replicad-opencascadejs";
 import opencascade from "replicad-opencascadejs/src/replicad_single.js";
 import opencascadeWasm from "replicad-opencascadejs/src/replicad_single.wasm?url";
 import { setOC } from "replicad";
-import { buildScene } from "./cad";
+import type { ExampleDefinition } from "../project/registry";
+import { defaultExampleId, examples, getExampleById } from "../project/registry";
+import type { ExampleMeta } from "../project/types";
 
 type OpencascadeModule = (opts?: {
   locateFile?: (file: string) => string;
@@ -22,14 +24,26 @@ const init = async (): Promise<boolean> => {
 
 const started = init();
 
+type Built = ReturnType<ExampleDefinition["buildScene"]>;
+
 export type MeshPayload = {
-  faces: ReturnType<ReturnType<typeof buildScene>["mesh"]>;
-  edges: ReturnType<ReturnType<typeof buildScene>["meshEdges"]>;
+  faces: ReturnType<Built["mesh"]>;
+  edges: ReturnType<Built["meshEdges"]>;
 };
 
-function createMesh(): Promise<MeshPayload> {
+function resolveExampleId(requested?: string): string {
+  if (requested && getExampleById(requested)) return requested;
+  return defaultExampleId;
+}
+
+function createMesh(exampleId?: string): Promise<MeshPayload> {
   return started.then(() => {
-    const shape = buildScene();
+    const id = resolveExampleId(exampleId);
+    const ex = getExampleById(id);
+    if (!ex) {
+      throw new Error(`Unknown example: ${exampleId ?? "(none)"}`);
+    }
+    const shape = ex.buildScene();
     return {
       faces: shape.mesh(),
       edges: shape.meshEdges(),
@@ -37,4 +51,8 @@ function createMesh(): Promise<MeshPayload> {
   });
 }
 
-expose({ createMesh });
+function listExamples(): ExampleMeta[] {
+  return examples.map(({ id, title, description }) => ({ id, title, description }));
+}
+
+expose({ createMesh, listExamples });

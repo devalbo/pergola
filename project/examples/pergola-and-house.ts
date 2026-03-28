@@ -1,14 +1,19 @@
 import { makeBox } from "replicad";
 import type { Shape3D } from "replicad";
+import type { ExampleMeta } from "../types";
 
-/** Simple gabled house on the −X side of the scene (meters-ish units). */
+export const exampleMeta: ExampleMeta = {
+  id: "pergola-and-house",
+  title: "Pergola beside house",
+  description: "Simple house on the left and a pergola assembly on the right.",
+};
+
 function house(): Shape3D {
   const body = makeBox([-12, -3.8, 0], [-4.2, 3.8, 4]);
   const roofBlock = makeBox([-12.4, -4.2, 4], [-3.8, 4.2, 5.6]);
   return body.fuse(roofBlock);
 }
 
-/** Four posts, cap beam ring, a few rafters — sits on the +X side. */
 function pergola(): Shape3D {
   const cx = 5.5;
   const cy = 0;
@@ -65,7 +70,6 @@ function pergola(): Shape3D {
   return assembly;
 }
 
-/** House and pergola beside each other, one fused solid for a single mesh. */
 export function buildScene(): Shape3D {
   return house().fuse(pergola());
 }

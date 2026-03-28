@@ -29,11 +29,12 @@ Open the URL Vite prints (default `http://localhost:5173`). Orbit: drag to rotat
 
 | Path | Role |
 |------|------|
-| [`src/cad.ts`](src/cad.ts) | Parametric model: house + pergola assembly (`buildScene`). |
-| [`src/worker.ts`](src/worker.ts) | Loads OpenCascade WASM, exposes mesh generation via [Comlink](https://github.com/GoogleChromeLabs/comlink). |
-| [`src/main.ts`](src/main.ts) | Three.js scene, lighting, and `replicad-threejs-helper` sync. |
+| [`project/examples/`](project/examples/) | One `.ts` file per CAD example; auto-registered by [`project/registry.ts`](project/registry.ts). |
+| [`project/README.md`](project/README.md) | How to add new examples. |
+| [`src/worker.ts`](src/worker.ts) | Loads OpenCascade WASM; `listExamples` + `createMesh(id)` via [Comlink](https://github.com/GoogleChromeLabs/comlink). |
+| [`src/main.ts`](src/main.ts) | Three.js viewer, example picker, `?example=` URL sync. |
 
-Edit `cad.ts`, save, and refresh (or rely on Vite HMR where applicable) to see changes.
+Add a file under `project/examples/`, save, and choose it from the **Example** dropdown (or open `?example=your-id`). Vite HMR reloads when you edit an example.
 
 ## Export
 
