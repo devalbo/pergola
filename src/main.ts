@@ -1,6 +1,7 @@
 import { wrap } from "comlink";
 import {
   AmbientLight,
+  Box3,
   BufferGeometry,
   Color,
   DirectionalLight,
@@ -14,6 +15,7 @@ import {
   PCFShadowMap,
   PerspectiveCamera,
   Scene,
+  Vector3,
   WebGLRenderer,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -32,7 +34,7 @@ const api = wrap<ViewerApi>(worker);
 const scene = new Scene();
 scene.background = new Color(0x87b5d4);
 
-const camera = new PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 200);
+const camera = new PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.08, 500);
 camera.position.set(14, 11, 16);
 
 const renderer = new WebGLRenderer({ antialias: true });
@@ -44,6 +46,8 @@ document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 1.5, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
 controls.update();
 
 const sun = new DirectionalLight(0xfff5e6, 1.35);
@@ -82,6 +86,54 @@ function clearCadRoot(): void {
     if (ch instanceof Mesh || ch instanceof LineSegments) disposeObject3D(ch);
     cadRoot.remove(ch);
   }
+}
+
+/**
+ * Frame house + pergola (exclude huge ground mesh from bbox). Orbit target biased toward the
+ * footprint so the lawn reads toward the bottom of the viewport.
+ */
+function frameCameraToStructure(): void {
+  const box = new Box3();
+  cadRoot.updateMatrixWorld(true);
+  cadRoot.traverse((obj) => {
+    if (obj instanceof Mesh) {
+      if (obj.userData.excludeFromFit) return;
+      box.expandByObject(obj, true);
+    }
+  });
+  if (box.isEmpty()) return;
+
+  const center = new Vector3();
+  const size = new Vector3();
+  box.getCenter(center);
+  box.getSize(size);
+
+  const maxDim = Math.max(size.x, size.y, size.z, 1e-6);
+  const fovRad = (camera.fov * Math.PI) / 180;
+  // Distance so the structure fills most of the vertical FOV (tight margin to “edges”)
+  const dist = (maxDim / (2 * Math.tan(fovRad / 2))) * 1.14;
+
+  // Elevation & azimuth: look from front-right and above; ground plane (z≈0) trends to bottom of screen
+  const elev = 0.46;
+  const azim = 0.58;
+  const cosE = Math.cos(elev);
+  const sinE = Math.sin(elev);
+  const dir = new Vector3(cosE * Math.cos(azim), cosE * Math.sin(azim), sinE).normalize();
+
+  camera.position.copy(center).add(dir.multiplyScalar(dist));
+
+  // Target slightly below structural center → more sky above, more ground below
+  const targetZ = box.min.z + size.z * 0.12;
+  controls.target.set(center.x, center.y, targetZ);
+  controls.minDistance = dist * 0.12;
+  controls.maxDistance = dist * 12;
+  controls.update();
+
+  const near = Math.max(0.05, dist * 0.02);
+  const far = Math.max(500, dist * 30);
+  camera.near = near;
+  camera.far = far;
+  camera.updateProjectionMatrix();
 }
 
 function readExampleFromUrl(): string | undefined {
@@ -161,6 +213,7 @@ async function loadMesh(exampleId?: string): Promise<void> {
     else syncLinesFromFaces(lineGeom, geom);
     const lines = new LineSegments(lineGeom, edgeMaterial);
     cadRoot.add(mesh, lines);
+    frameCameraToStructure();
     return;
   }
 
@@ -177,6 +230,7 @@ async function loadMesh(exampleId?: string): Promise<void> {
     const mesh = new Mesh(geom, mat);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
+    mesh.userData.excludeFromFit = i === 0;
     cadRoot.add(mesh);
 
     const lineGeom = new BufferGeometry();
@@ -184,10 +238,13 @@ async function loadMesh(exampleId?: string): Promise<void> {
     else syncLinesFromFaces(lineGeom, geom);
     cadRoot.add(new LineSegments(lineGeom, edgeMaterial));
   });
+
+  frameCameraToStructure();
 }
 
 function animate(): void {
   requestAnimationFrame(animate);
+  controls.update();
   renderer.render(scene, camera);
 }
 
@@ -195,6 +252,7 @@ window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  frameCameraToStructure();
 });
 
 async function bootstrap(): Promise<void> {
