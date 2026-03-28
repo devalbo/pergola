@@ -5,7 +5,7 @@ import type { ExampleMeta } from "../types";
 export const exampleMeta: ExampleMeta = {
   id: "minimal-cube",
   title: "Minimal cube",
-  description: "Small centered box — use as a template for new examples.",
+  description: "2×2×2 ft box (all CAD lengths in feet) — template for new examples.",
 };
 
 export function buildScene(): Shape3D {

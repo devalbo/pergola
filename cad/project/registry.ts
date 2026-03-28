@@ -1,4 +1,5 @@
 import type { Shape3D } from "replicad";
+import type { NamedScenePoint } from "../namedScenePoint";
 import type { ExampleMeta } from "./types";
 
 export type ExampleDefinition = ExampleMeta & {
@@ -6,6 +7,12 @@ export type ExampleDefinition = ExampleMeta & {
   /** When set with `scenePartColors`, the viewer meshes parts separately for materials. */
   buildSceneParts?: () => Shape3D[];
   scenePartColors?: number[];
+  /** Labels for hover tooltips; same order and length as `buildSceneParts` / `scenePartColors`. */
+  scenePartNames?: string[];
+  /** Per-part animation effects (null = static); same order as `buildSceneParts`. */
+  scenePartAnimations?: (string | null)[];
+  /** Junction / reference points (feet); see `cad/sceneOrientation.ts` for N/S/E/W. */
+  sceneNamedPoints?: () => NamedScenePoint[];
 };
 
 const modules = import.meta.glob("./examples/*.ts", { eager: true }) as Record<
@@ -25,6 +32,9 @@ function toDefinition(path: string, mod: Record<string, unknown>): ExampleDefini
 
   const buildSceneParts = mod.buildSceneParts;
   const scenePartColors = mod.scenePartColors;
+  const scenePartNames = mod.scenePartNames;
+  const scenePartAnimations = mod.scenePartAnimations;
+  const sceneNamedPoints = mod.sceneNamedPoints;
 
   return {
     id: meta?.id ?? slug,
@@ -36,6 +46,14 @@ function toDefinition(path: string, mod: Record<string, unknown>): ExampleDefini
     scenePartColors: Array.isArray(scenePartColors)
       ? (scenePartColors as number[])
       : undefined,
+    scenePartNames: Array.isArray(scenePartNames) ? (scenePartNames as string[]) : undefined,
+    scenePartAnimations: Array.isArray(scenePartAnimations)
+      ? (scenePartAnimations as (string | null)[])
+      : undefined,
+    sceneNamedPoints:
+      typeof sceneNamedPoints === "function"
+        ? (sceneNamedPoints as () => NamedScenePoint[])
+        : undefined,
   };
 }
 

@@ -1,16 +1,18 @@
 import { makeBox } from "replicad";
 import type { Shape3D } from "replicad";
+import { inches } from "../units";
 
 export type GroundParams = {
-  /** Half-size of the square footprint in X and Y (meters). */
+  /** Half-size of the square footprint in X and Y (feet). */
   halfExtent: number;
   /** Thickness below z = 0 (slab top flush with world origin). */
   thickness: number;
 };
 
+/** ~180×180 ft lot; slab ~6 in thick. */
 export const defaultGroundParams: GroundParams = {
-  halfExtent: 28,
-  thickness: 0.14,
+  halfExtent: 90,
+  thickness: inches(6),
 };
 
 /**

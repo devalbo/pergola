@@ -1,7 +1,6 @@
 import { makeBox } from "replicad";
 import type { Shape3D } from "replicad";
-
-/** Corner points for the simplified house footprint and roof block. */
+/** Corner points for the simplified house footprint and roof block. Coordinates in **feet**. */
 export type HouseLayout = {
   bodyMin: [number, number, number];
   bodyMax: [number, number, number];
@@ -9,12 +8,15 @@ export type HouseLayout = {
   roofMax: [number, number, number];
 };
 
-/** Default layout: house on the −X side of the yard. */
+/**
+ * Default layout: house on the −X side of the yard (feet).
+ * Main body **70′ wide (Y) × 35′ deep (X)**; east face at `bodyMax[0]` for the extension; 10′ walls; roof slightly larger / taller.
+ */
 export const defaultHouseLayout: HouseLayout = {
-  bodyMin: [-12, -3.8, 0],
-  bodyMax: [-4.2, 3.8, 4],
-  roofMin: [-12.4, -4.2, 4],
-  roofMax: [-3.8, 4.2, 5.6],
+  bodyMin: [-43, -35, 0],
+  bodyMax: [-8, 35, 10],
+  roofMin: [-43.5, -35.5, 10],
+  roofMax: [-7.5, 35.5, 14],
 };
 
 /**
@@ -28,11 +30,14 @@ export function buildHouse(layout: Partial<HouseLayout> = {}): Shape3D {
   return body.fuse(roof);
 }
 
-/** Single-story extension (flat roof massing), axis-aligned, walls vertical along Z. */
+/** Single-story extension / morning room (flat roof massing), axis-aligned, walls along Z. */
 export type ExtensionLayout = {
   min: [number, number, number];
   max: [number, number, number];
 };
+
+/** One-story extension ceiling height (ft), relative to z = 0 at grade. */
+export const defaultExtensionHeightFt = 9;
 
 /**
  * Extension bump-out from the main body’s **east face** (`bodyMax[0]`):
@@ -56,7 +61,7 @@ export function extensionLayoutForHouse(house: HouseLayout): ExtensionLayout {
 
   return {
     min: [xMin, yMin, bz0],
-    max: [xMax, yMax, 3.05],
+    max: [xMax, yMax, defaultExtensionHeightFt],
   };
 }
 

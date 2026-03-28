@@ -9,4 +9,13 @@ export {
   type ExtensionLayout,
   type HouseLayout,
 } from "./house";
-export { buildPergola, defaultPergolaParams, type PergolaParams } from "./pergola";
+export {
+  buildPergola,
+  buildPergolaCanopy,
+  buildPergolaPost,
+  buildPergolaPosts,
+  defaultPergolaParams,
+  pergolaCenterFromOuterSwCorner,
+  pergolaPostCornerBoxes,
+  type PergolaParams,
+} from "./pergola";

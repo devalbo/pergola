@@ -7,6 +7,7 @@ import { setOC } from "replicad";
 import type { ExampleDefinition } from "../cad/project/registry";
 import { defaultExampleId, examples, getExampleById } from "../cad/project/registry";
 import type { ExampleMeta } from "../cad/project/types";
+import type { NamedScenePoint } from "../cad/namedScenePoint";
 
 type OpencascadeModule = (opts?: {
   locateFile?: (file: string) => string;
@@ -33,8 +34,17 @@ export type MeshPayload = {
 };
 
 export type MeshResult =
-  | { kind: "single"; payload: MeshPayload }
-  | { kind: "parts"; parts: MeshPayload[]; colors: number[] };
+  | { kind: "single"; payload: MeshPayload; partLabel?: string; namedPoints: NamedScenePoint[] }
+  | {
+      kind: "parts";
+      parts: MeshPayload[];
+      colors: number[];
+      partNames?: string[];
+      partAnimations?: (string | null)[];
+      namedPoints: NamedScenePoint[];
+    };
+
+export type { NamedScenePoint };
 
 function meshPayloadFromShape(shape: Shape3D): MeshPayload {
   return {
@@ -56,6 +66,8 @@ function createMesh(exampleId?: string): Promise<MeshResult> {
       throw new Error(`Unknown example: ${exampleId ?? "(none)"}`);
     }
 
+    const namedPoints: NamedScenePoint[] = ex.sceneNamedPoints?.() ?? [];
+
     if (
       ex.buildSceneParts &&
       ex.scenePartColors &&
@@ -65,11 +77,18 @@ function createMesh(exampleId?: string): Promise<MeshResult> {
       const n = Math.min(shapes.length, ex.scenePartColors.length);
       const parts = shapes.slice(0, n).map((s) => meshPayloadFromShape(s));
       const colors = ex.scenePartColors.slice(0, n);
-      return { kind: "parts", parts, colors };
+      const partNames = ex.scenePartNames?.slice(0, n);
+      const partAnimations = ex.scenePartAnimations?.slice(0, n);
+      return { kind: "parts", parts, colors, partNames, partAnimations, namedPoints };
     }
 
     const shape = ex.buildScene();
-    return { kind: "single", payload: meshPayloadFromShape(shape) };
+    return {
+      kind: "single",
+      payload: meshPayloadFromShape(shape),
+      partLabel: ex.title,
+      namedPoints,
+    };
   });
 }
 
