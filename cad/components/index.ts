@@ -5,6 +5,7 @@ export {
   buildHouseWithExtension,
   defaultExtensionLayout,
   defaultHouseLayout,
+  extensionLayoutForHouse,
   type ExtensionLayout,
   type HouseLayout,
 } from "./house";
