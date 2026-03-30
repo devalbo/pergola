@@ -42,3 +42,8 @@ export function defaultParamValues(schema: ExampleParamsSchema): Record<string, 
 export type ExampleListItem = ExampleMeta & {
   paramSchema: ExampleParamsSchema;
 };
+
+/** Optional data passed main → worker with `createMesh` (reserved for examples that need it). */
+export type BuildSceneOptions = {
+  svgMarkup?: string;
+};

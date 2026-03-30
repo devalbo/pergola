@@ -1,6 +1,16 @@
 import type { ExampleListItem, ExampleParamsSchema, ParamField } from "../cad/project/types";
 import { defaultParamValues } from "../cad/project/types";
 
+/** Merge stored overrides onto full schema defaults so older cached maps (missing newer fields) stay valid. */
+function mergeWithSchemaDefaults(
+  schema: ExampleParamsSchema,
+  stored: Record<string, number> | undefined,
+): Record<string, number> {
+  const base = defaultParamValues(schema);
+  if (!stored) return base;
+  return { ...base, ...stored };
+}
+
 function debounce<T extends (...args: Parameters<T>) => void>(
   fn: T,
   ms: number,
@@ -15,13 +25,17 @@ function debounce<T extends (...args: Parameters<T>) => void>(
   };
 }
 
+function controlForField(form: HTMLFormElement, fieldId: string): HTMLInputElement | HTMLSelectElement | null {
+  return form.querySelector(`[name="${CSS.escape(fieldId)}"]`);
+}
+
 function readFormValues(
   form: HTMLFormElement,
   schema: ExampleParamsSchema,
 ): Record<string, number> {
   const out: Record<string, number> = {};
   for (const f of schema.fields) {
-    const el = form.elements.namedItem(f.id);
+    const el = controlForField(form, f.id);
     if (el instanceof HTMLSelectElement) {
       const n = parseFloat(el.value);
       out[f.id] = Number.isFinite(n) ? n : f.default;
@@ -47,8 +61,8 @@ function applyFieldConstraints(value: number, field: ParamField): number {
   return v;
 }
 
-/** Examples that show “Import SVG” in the parameters panel (viewer-side textures). */
-const SVG_TEXTURE_EXAMPLE_IDS = new Set(["coaster"]);
+/** Examples that show “Import SVG” in the parameters panel. */
+const SVG_TEXTURE_EXAMPLE_IDS = new Set(["coaster-with-image"]);
 
 export type ExampleParamPanelApi = {
   /** Toolbar control: toggles the parameter panel. Hidden when the example has no schema. */
@@ -165,7 +179,7 @@ export function createExampleParamPanel(
 
   function scheduleApply(): void {
     if (!activeSchema?.fields?.length || !activeExampleId) return;
-    const vals = readFormValues(form, activeSchema);
+    const vals = mergeWithSchemaDefaults(activeSchema, readFormValues(form, activeSchema));
     valuesByExampleId.set(activeExampleId, vals);
     applyDebounced(activeExampleId, vals);
   }
@@ -232,10 +246,12 @@ export function createExampleParamPanel(
           const raw = parseFloat(input.value);
           if (!Number.isFinite(raw)) {
             input.value = String(field.default);
+            scheduleApply();
             return;
           }
           const clamped = applyFieldConstraints(raw, field);
           if (clamped !== raw) input.value = String(clamped);
+          scheduleApply();
         });
 
         row.append(lab, input);
@@ -248,7 +264,7 @@ export function createExampleParamPanel(
 
   function fillForm(schema: ExampleParamsSchema, values: Record<string, number>): void {
     for (const f of schema.fields) {
-      const el = form.elements.namedItem(f.id);
+      const el = controlForField(form, f.id);
       const v = values[f.id] ?? f.default;
       const clamped = applyFieldConstraints(v, f);
       if (el instanceof HTMLSelectElement) {
@@ -264,10 +280,11 @@ export function createExampleParamPanel(
     const show = SVG_TEXTURE_EXAMPLE_IDS.has(exampleId);
     svgImportSection.style.display = show ? "flex" : "none";
     if (show) {
-      svgImportBtn.title =
-        exampleId === "coaster"
-          ? "Replace the coaster top pattern with an SVG from your computer"
-          : "Import an SVG texture";
+      if (exampleId === "coaster-with-image") {
+        svgImportBtn.title = "Replace the coaster top pattern with an SVG from your computer";
+      } else {
+        svgImportBtn.title = "Import an SVG file";
+      }
     }
   }
 
@@ -288,7 +305,7 @@ export function createExampleParamPanel(
     paramsButton.hidden = false;
     syncSvgImportSection(exampleId);
     buildForm(activeSchema);
-    const initial = valuesByExampleId.get(exampleId) ?? defaultParamValues(activeSchema);
+    const initial = mergeWithSchemaDefaults(activeSchema, valuesByExampleId.get(exampleId));
     valuesByExampleId.set(exampleId, initial);
     fillForm(activeSchema, initial);
   }
@@ -296,7 +313,7 @@ export function createExampleParamPanel(
   function getValuesForExample(exampleId: string): Record<string, number> | undefined {
     const ex = examples.find((e) => e.id === exampleId);
     if (!ex?.paramSchema.fields.length) return undefined;
-    return valuesByExampleId.get(exampleId) ?? defaultParamValues(ex.paramSchema);
+    return mergeWithSchemaDefaults(ex.paramSchema, valuesByExampleId.get(exampleId));
   }
 
   document.body.appendChild(panel);

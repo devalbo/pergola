@@ -1,11 +1,11 @@
 import type { Shape3D } from "replicad";
 import type { NamedScenePoint } from "../namedScenePoint";
 import { EMPTY_EXAMPLE_PARAM_SCHEMA } from "./exampleParams";
-import type { ExampleMeta, ExampleParamsSchema } from "./types";
+import type { BuildSceneOptions, ExampleMeta, ExampleParamsSchema } from "./types";
 
 export type ExampleDefinition = ExampleMeta & {
   /** Always pass merged params from {@link mergeExampleParams} in the worker (see `cad/project/exampleParams.ts`). */
-  buildScene: (paramValues?: Record<string, number>) => Shape3D;
+  buildScene: (paramValues?: Record<string, number>, options?: BuildSceneOptions) => Shape3D;
   /** When set with `scenePartColors`, the viewer meshes parts separately for materials. */
   buildSceneParts?: (paramValues?: Record<string, number>) => Shape3D[];
   scenePartColors?: number[];
@@ -45,7 +45,7 @@ function toDefinition(path: string, mod: Record<string, unknown>): ExampleDefini
     id: meta?.id ?? slug,
     title: meta?.title ?? slug,
     description: meta?.description,
-    buildScene: buildScene as (paramValues?: Record<string, number>) => Shape3D,
+    buildScene: buildScene as (paramValues?: Record<string, number>, options?: BuildSceneOptions) => Shape3D,
     buildSceneParts:
       typeof buildSceneParts === "function"
         ? (buildSceneParts as (paramValues?: Record<string, number>) => Shape3D[])
@@ -75,7 +75,7 @@ export const examples: ExampleDefinition[] = Object.entries(modules)
   .sort((a, b) => a.id.localeCompare(b.id));
 
 export const defaultExampleId: string =
-  examples.find((e) => e.id === "patio")?.id ?? examples[0]?.id ?? "";
+  examples.find((e) => e.id === "coaster-shaped")?.id ?? examples[0]?.id ?? "";
 
 export function getExampleById(id: string): ExampleDefinition | undefined {
   return examples.find((e) => e.id === id);

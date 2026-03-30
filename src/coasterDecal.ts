@@ -12,8 +12,8 @@ import {
 import { mergeCoasterParams, SHAPE_ROUND } from "../cad/project/examples/coaster";
 import { loadSvgAsContainFitTexture } from "./loadSvgTexture";
 
-const COASTER_EXAMPLE_ID = "coaster";
-const COASTER_SOLID_LABEL = "Coaster";
+const COASTER_EXAMPLE_ID = "coaster-with-image";
+const COASTER_SOLID_LABEL = "Coaster with Image";
 
 /** `userData.partLabel` on the decal mesh (remove via {@link removeCoasterDecal}). */
 export const COASTER_DECAL_LABEL = "Coaster pattern (SVG)";

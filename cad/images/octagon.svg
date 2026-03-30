@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <title>Regular octagon</title>
+  <!-- Flat top/bottom; circumradius 85, center (100, 100). Path form for outline extraction. -->
+  <path
+    fill="#000000"
+    stroke="none"
+    d="M 65.56 16.85 L 134.44 16.85 L 178.48 67.38 L 178.48 132.62 L 134.44 183.15 L 65.56 183.15 L 21.52 132.62 L 21.52 67.38 Z"
+  />
+</svg>

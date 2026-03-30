@@ -12,6 +12,7 @@
     "replicad": "0.22.1",
     "replicad-opencascadejs": "0.22.0",
     "replicad-threejs-helper": "0.22.0",
+    "svg-path-properties": "^2.0.2",
     "three": "0.183.2"
   },
   "devDependencies": {

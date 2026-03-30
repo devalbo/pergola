@@ -21,7 +21,7 @@ import {
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { syncFaces, syncLines, syncLinesFromFaces } from "replicad-threejs-helper";
-import type { ExampleListItem } from "../cad/project/types";
+import type { BuildSceneOptions, ExampleListItem } from "../cad/project/types";
 import type { MeshPayload, MeshResult } from "./worker";
 import { createOrientationScene3d, setupOrientationOverlay } from "./compass";
 import { createJunctionSystem } from "./junctions";
@@ -36,7 +36,11 @@ import tigerSvgUrl from "../cad/images/Ghostscript_Tiger.svg?url";
 
 type ViewerApi = {
   listExamples: () => Promise<{ examples: ExampleListItem[]; defaultId: string }>;
-  createMesh: (exampleId?: string, paramValues?: Record<string, number>) => Promise<MeshResult>;
+  createMesh: (
+    exampleId?: string,
+    paramValues?: Record<string, number>,
+    sceneOptions?: BuildSceneOptions,
+  ) => Promise<MeshResult>;
 };
 
 const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
@@ -47,9 +51,10 @@ let defaultExampleIdCached = "patio";
 let currentExampleId = "patio";
 /** After a successful mesh build; used to frame the camera only when the example id changes. */
 let lastMeshedExampleId: string | null = null;
+/** Monotonic counter so only the latest `loadMesh` run applies geometry (avoids stale meshes when async completions race). */
+let loadMeshGeneration = 0;
 /** User-chosen SVG for coaster pattern; falls back to bundled tiger when unset. */
 let customCoasterSvgObjectUrl: string | null = null;
-
 function coasterSvgUrlForDecal(): string {
   return customCoasterSvgObjectUrl ?? tigerSvgUrl;
 }
@@ -182,17 +187,31 @@ function frameCameraToStructure(): void {
 
 async function loadMesh(exampleId?: string, paramValues?: Record<string, number>): Promise<void> {
   const id = exampleId ?? defaultExampleIdCached;
-  const shouldFrameCamera = lastMeshedExampleId !== id;
+  const gen = ++loadMeshGeneration;
+  const shouldFrameCamera = lastMeshedExampleId !== id || id === "svg-extrude";
   currentExampleId = id;
-  const result = await api.createMesh(exampleId, paramValues);
+  const logCad = id === "svg-extrude";
+  const tLoad = performance.now();
+  if (logCad) {
+    console.log("[cad:main] loadMesh await createMesh…", { gen, paramValues });
+  }
+  const result = await api.createMesh(id, paramValues, undefined);
+  if (logCad) {
+    console.log("[cad:main] createMesh returned", (performance.now() - tLoad).toFixed(0), "ms");
+  }
+  if (gen !== loadMeshGeneration) return;
   clearCadRoot();
 
   if (result.kind === "single") {
     const { faces, edges } = result.payload;
     const geom = new BufferGeometry();
+    let t = performance.now();
     syncFaces(geom, faces);
+    if (logCad) {
+      console.log("[cad:main] syncFaces", (performance.now() - t).toFixed(1), "ms");
+    }
     const mesh = new Mesh(geom, defaultMat.clone());
-    if (currentExampleId === "coaster") {
+    if (currentExampleId === "coaster-with-image") {
       const cm = coasterAppearanceFromParams(mergeCoasterParams(paramValues));
       mesh.material.color.set(cm.color);
       mesh.material.roughness = cm.roughness;
@@ -204,8 +223,12 @@ async function loadMesh(exampleId?: string, paramValues?: Record<string, number>
     mesh.receiveShadow = true;
     if (result.partLabel) mesh.userData.partLabel = result.partLabel;
     const lineGeom = new BufferGeometry();
+    t = performance.now();
     if (edges) syncLines(lineGeom, edges);
     else syncLinesFromFaces(lineGeom, geom);
+    if (logCad) {
+      console.log("[cad:main] syncLines", (performance.now() - t).toFixed(1), "ms");
+    }
     const lines = new LineSegments(lineGeom, edgeMaterial);
     cadRoot.add(mesh, lines);
     junctions.addColumns(result.namedPoints);
@@ -216,7 +239,16 @@ async function loadMesh(exampleId?: string, paramValues?: Record<string, number>
       renderer,
       paramValues ?? mergeCoasterParams(),
     );
-    if (shouldFrameCamera) frameCameraToStructure();
+    if (shouldFrameCamera) {
+      t = performance.now();
+      frameCameraToStructure();
+      if (logCad) {
+        console.log("[cad:main] frameCameraToStructure", (performance.now() - t).toFixed(1), "ms");
+      }
+    }
+    if (logCad) {
+      console.log("[cad:main] loadMesh single-scene done", (performance.now() - tLoad).toFixed(0), "ms total since await start");
+    }
     lastMeshedExampleId = id;
     return;
   }
@@ -333,17 +365,16 @@ async function bootstrap(): Promise<void> {
       console.warn("[svg import] Expected an SVG file.");
       return;
     }
-    if (currentExampleId === "coaster") {
+    if (currentExampleId === "coaster-with-image") {
       if (customCoasterSvgObjectUrl) URL.revokeObjectURL(customCoasterSvgObjectUrl);
       customCoasterSvgObjectUrl = URL.createObjectURL(file);
       removeCoasterDecal(cadRoot);
       const pv =
-        paramPanel.getValuesForExample("coaster") ?? mergeCoasterParams();
-      await attachCoasterDecal(cadRoot, "coaster", coasterSvgUrlForDecal(), renderer, pv);
+        paramPanel.getValuesForExample("coaster-with-image") ?? mergeCoasterParams();
+      await attachCoasterDecal(cadRoot, "coaster-with-image", coasterSvgUrlForDecal(), renderer, pv);
     }
   }
   paramPanel.syncToExample(initialId);
-  await loadMesh(initialId, paramPanel.getValuesForExample(initialId));
 
   const bar = buildExampleToolbar(
     list,
@@ -357,6 +388,16 @@ async function bootstrap(): Promise<void> {
     junctions,
   );
   bar.appendChild(paramPanel.paramsButton);
+
+  try {
+    await loadMesh(initialId, paramPanel.getValuesForExample(initialId));
+  } catch (err) {
+    console.error(err);
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `<pre style="position:fixed;bottom:0;left:0;right:0;background:#300;color:#fcc;padding:10px 12px;max-height:40%;overflow:auto;z-index:100;font:13px/1.4 monospace;">${String(err)}</pre>`,
+    );
+  }
 
   if (!fromUrl || !list.some((e) => e.id === fromUrl)) {
     setExampleInUrl(initialId);

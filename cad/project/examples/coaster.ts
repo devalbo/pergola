@@ -5,8 +5,8 @@ import { mergeExampleParams } from "../exampleParams";
 import type { ExampleMeta, ExampleParamsSchema } from "../types";
 
 export const exampleMeta: ExampleMeta = {
-  id: "coaster",
-  title: "Coaster",
+  id: "coaster-with-image",
+  title: "Coaster with Image",
   description:
     "Square or round coaster with a centered SVG on the top face, scaled to fit (viewer decal).",
 };
